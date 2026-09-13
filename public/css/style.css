@@ -139,3 +139,14 @@ body{
     height: 300px;
   }
 }
+
+/* review section styling */
+.review-card {
+  border: 1px solid #e2e8f0 !important;
+  background-color: #fff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.review-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}

@@ -19,8 +19,8 @@
 
   .search-inp{
     border-radius: 25px;
-    padding: 0.5rem 3 rem 0.5rem 3rem;
-    font-size: 0.8;
+    padding: 0 3rem 0.5rem 3rem;
+    font-size: 0.8rem;
   }
 
 </style>
@@ -40,8 +40,11 @@
 
       </div>
       <div class="navbar-nav ms-auto">
-        <form class="d-flex" role="search">
-          <input class="form-control me-2 search-inp" type="search" placeholder="Search your next destinaton">
+        <form class="d-flex" role="search" action="/listings/search" method="GET">
+          <% if (typeof category !== 'undefined' && category) { %>
+            <input type="hidden" name="category" value="<%= category %>">
+          <% } %>
+          <input class="form-control me-2 search-inp" type="search" name="q" placeholder="Search your next destinaton" value="<%= typeof searchQuery !== 'undefined' && searchQuery ? searchQuery : '' %>">
           <button class="btn search-btn" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
         </form>
       </div>
@@ -58,3 +61,32 @@
     </div>
   </div>
 </nav>
+
+<script>
+  (() => {
+    const searchInput = document.querySelector(".search-inp");
+    if (!searchInput) return;
+
+    let isClearing = false;
+    const handleClear = () => {
+      if (isClearing) return;
+      if (searchInput.value.trim() === "") {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isSearchActive = window.location.pathname.includes("/search") || urlParams.has("q");
+        if (isSearchActive) {
+          isClearing = true;
+          const hiddenCategoryInput = document.querySelector('form[action="/listings/search"] input[name="category"]');
+          const category = urlParams.get("category") || (hiddenCategoryInput ? hiddenCategoryInput.value : "");
+          if (category && category.trim()) {
+            window.location.href = `/listings?category=${encodeURIComponent(category.trim())}`;
+          } else {
+            window.location.href = "/listings";
+          }
+        }
+      }
+    };
+
+    searchInput.addEventListener("input", handleClear);
+    searchInput.addEventListener("search", handleClear);
+  })();
+</script>

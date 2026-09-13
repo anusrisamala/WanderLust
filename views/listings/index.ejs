@@ -37,6 +37,11 @@
       cursor: pointer;
     }
 
+    .filter.active-filter {
+      opacity: 1;
+      border-bottom: 2px solid #000;
+    }
+
     .filter p{
       font-size: 0.8rem;
     }
@@ -57,52 +62,66 @@
     }
   </style>
 
+<%
+  const currentSearch = (typeof searchQuery !== "undefined" && searchQuery) ? searchQuery : "";
+  const currentCategory = (typeof category !== "undefined" && category) ? category : "";
+
+  function getFilterUrl(catName) {
+    if (!catName) {
+      return currentSearch ? `/listings/search?q=${encodeURIComponent(currentSearch)}` : '/listings';
+    }
+    return currentSearch 
+      ? `/listings/search?q=${encodeURIComponent(currentSearch)}&category=${encodeURIComponent(catName)}`
+      : `/listings?category=${encodeURIComponent(catName)}`;
+  }
+%>
+
 <div id="filters">
-  <a href="/listings" class="filter">
+  <a href="<%= getFilterUrl('') %>" class="filter <%= !currentCategory ? 'active-filter' : '' %>">
     <div><i class="fa-solid fa-house"></i></div>
     <p>All</p>
   </a>
-  <a href="/listings?category=Trending" class="filter">
+  <a href="<%= getFilterUrl('Trending') %>" class="filter <%= currentCategory === 'Trending' ? 'active-filter' : '' %>">
     <div><i class="fa-solid fa-fire"></i></div>
     <p>Trending</p>
   </a>
-  <a href="/listings?category=Rooms" class="filter">
+  <a href="<%= getFilterUrl('Rooms') %>" class="filter <%= currentCategory === 'Rooms' ? 'active-filter' : '' %>">
     <div><i class="fa-solid fa-bed"></i></div>
     <p>Rooms</p>
   </a>
-  <a href="/listings?category=Iconic%20Cities" class="filter">
+  <a href="<%= getFilterUrl('Iconic Cities') %>" class="filter <%= currentCategory === 'Iconic Cities' ? 'active-filter' : '' %>">
     <div><i class="fa-solid fa-mountain-city"></i></div>
     <p>Iconic Cities</p>
   </a>
-  <a href="/listings?category=Mountains" class="filter">
+  <a href="<%= getFilterUrl('Mountains') %>" class="filter <%= currentCategory === 'Mountains' ? 'active-filter' : '' %>">
     <div><i class="fa-solid fa-mountain"></i></div>
     <p>Mountains</p>
   </a>
-  <a href="/listings?category=Castles" class="filter">
+  <a href="<%= getFilterUrl('Castles') %>" class="filter <%= currentCategory === 'Castles' ? 'active-filter' : '' %>">
     <div><i class="fa-solid fa-fort-awesome"></i></div>
     <p>Castles</p>
   </a>
-  <a href="/listings?category=Amazing%20Pools" class="filter">
+  <a href="<%= getFilterUrl('Amazing Pools') %>" class="filter <%= currentCategory === 'Amazing Pools' ? 'active-filter' : '' %>">
     <div><i class="fa-solid fa-person-swimming"></i></div>
     <p>Amazing Pools</p>
   </a>
-  <a href="/listings?category=Camping" class="filter">
+  <a href="<%= getFilterUrl('Camping') %>" class="filter <%= currentCategory === 'Camping' ? 'active-filter' : '' %>">
     <div><i class="fa-solid fa-campground"></i></div>
     <p>Camping</p>
   </a>
-  <a href="/listings?category=Farms" class="filter">
+  <a href="<%= getFilterUrl('Farms') %>" class="filter <%= currentCategory === 'Farms' ? 'active-filter' : '' %>">
     <div><i class="fa-solid fa-cow"></i></div>
     <p>Farms</p>
   </a>
-  <a href="/listings?category=Arctic" class="filter">
+  <a href="<%= getFilterUrl('Arctic') %>" class="filter <%= currentCategory === 'Arctic' ? 'active-filter' : '' %>">
     <div><i class="fa-solid fa-snowflake"></i></div>
     <p>Arctic</p>
   </a>
-  <a href="/listings?category=Domes" class="filter">
+  <a href="<%= getFilterUrl('Domes') %>" class="filter <%= currentCategory === 'Domes' ? 'active-filter' : '' %>">
     <div><i class="fa-solid fa-igloo"></i></div>
     <p>Domes</p>
   </a>
-  <a href="/listings?category=Boats" class="filter">
+  <a href="<%= getFilterUrl('Boats') %>" class="filter <%= currentCategory === 'Boats' ? 'active-filter' : '' %>">
     <div><i class="fa-solid fa-snowflake"></i></div>
     <p>Boats</p>
   </a>
@@ -115,7 +134,40 @@
   </div>
 </div>
 
+<% if (currentSearch && currentCategory) { %>
+  <div class="mt-3 mb-2">
+    <h4>Search results for "<%= currentSearch %>" in <%= currentCategory %></h4>
+  </div>
+<% } else if (currentSearch) { %>
+  <div class="mt-3 mb-2">
+    <h4>Search results for "<%= currentSearch %>"</h4>
+  </div>
+<% } else if (currentCategory) { %>
+  <div class="mt-3 mb-2">
+    <h4><%= currentCategory %></h4>
+  </div>
+<% } %>
+
 <div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 mt-3">
+  <% if (allListings.length === 0) { %>
+    <div class="col-12 mt-3 mb-5">
+      <% if (currentSearch && currentCategory) { %>
+        <h5>No listings found for "<%= currentSearch %>" in <%= currentCategory %>.</h5>
+        <p class="text-muted">
+          Try <a href="/listings/search?q=<%= encodeURIComponent(currentSearch) %>">viewing all results for "<%= currentSearch %>"</a> or <a href="/listings">browse all listings</a>.
+        </p>
+      <% } else if (currentSearch) { %>
+        <h5>No listings found for "<%= currentSearch %>".</h5>
+        <p class="text-muted">Try searching with different keywords or <a href="/listings">browse all listings</a>.</p>
+      <% } else if (currentCategory) { %>
+        <h5>No listings found in <%= currentCategory %>.</h5>
+        <p class="text-muted"><a href="/listings">Browse all listings</a></p>
+      <% } else { %>
+        <h5>No listings found.</h5>
+        <p class="text-muted"><a href="/listings">Browse all listings</a></p>
+      <% } %>
+    </div>
+  <% } %>
   <% for(let listing of allListings) { %>
     <a href="/listings/<%= listing._id %>" class="listing-link">
     <div class="card col listing-card" >

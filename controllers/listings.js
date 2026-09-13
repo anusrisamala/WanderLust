@@ -1,13 +1,69 @@
 const Listing  = require("../models/listing");
 
-module.exports.index = async (req, res) => {
-    const { category } = req.query;
-    let filter = {};
-    if (category) {
-        filter.category = category;
+function buildQuery(q, category) {
+    const conditions = [];
+
+    if (q && q.trim()) {
+        const safeQuery = q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        conditions.push({
+            $or: [
+                { title: { $regex: safeQuery, $options: "i" } },
+                { location: { $regex: safeQuery, $options: "i" } },
+                { country: { $regex: safeQuery, $options: "i" } },
+                { category: { $regex: safeQuery, $options: "i" } }
+            ]
+        });
     }
+
+    if (category && category.trim()) {
+        conditions.push({ category: category.trim() });
+    }
+
+    if (conditions.length === 0) {
+        return {};
+    } else if (conditions.length === 1) {
+        return conditions[0];
+    } else {
+        return { $and: conditions };
+    }
+}
+
+module.exports.index = async (req, res) => {
+    const { category, q } = req.query;
+    const query = q ? q.trim() : "";
+    const selectedCategory = category ? category.trim() : "";
+
+    const filter = buildQuery(query, selectedCategory);
     const allListings = await Listing.find(filter);
-    res.render("listings/index.ejs", { allListings });
+
+    res.render("listings/index.ejs", {
+        allListings,
+        searchQuery: query,
+        category: selectedCategory
+    });
+};
+
+module.exports.searchListings = async (req, res) => {
+    let { q, category } = req.query;
+    const query = q ? q.trim() : "";
+    const selectedCategory = category ? category.trim() : "";
+
+    if (!query && !selectedCategory) {
+        return res.redirect("/listings");
+    }
+
+    if (!query && selectedCategory) {
+        return res.redirect(`/listings?category=${encodeURIComponent(selectedCategory)}`);
+    }
+
+    const filter = buildQuery(query, selectedCategory);
+    const allListings = await Listing.find(filter);
+
+    res.render("listings/index.ejs", {
+        allListings,
+        searchQuery: query,
+        category: selectedCategory
+    });
 };
 
 module.exports.renderNewForm = (req,res)=>{
@@ -23,6 +79,32 @@ module.exports.showListing = async(req,res)=>{
     }
     console.log(listing);
     res.render("listings/show.ejs",{listing});
+}
+
+async function geocodeLocation(location) {
+    if (!location) return null;
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`,
+            {
+                headers: {
+                    "User-Agent": "WanderLust-App"
+                }
+            }
+        );
+        const data = await response.json();
+        if (data && data.length > 0) {
+            return {
+                latitude: parseFloat(data[0].lat),
+                longitude: parseFloat(data[0].lon)
+            };
+        } else {
+            console.log(`Geocoding failed: No coordinates found for location "${location}"`);
+        }
+    } catch (err) {
+        console.log(`Geocoding error for location "${location}":`, err.message);
+    }
+    return null;
 }
 
 module.exports.createListing = async(req,res)=>{
@@ -47,24 +129,10 @@ module.exports.createListing = async(req,res)=>{
     newListing.image = {url, filename};
 
     if (newListing.location) {
-        try {
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(newListing.location)}&format=json&limit=1`,
-                {
-                    headers: {
-                        "User-Agent": "WanderLust-App"
-                    }
-                }
-            );
-            const data = await response.json();
-            if (data && data.length > 0) {
-                newListing.latitude = parseFloat(data[0].lat);
-                newListing.longitude = parseFloat(data[0].lon);
-            } else {
-                console.log(`Geocoding failed: No coordinates found for location "${newListing.location}"`);
-            }
-        } catch (err) {
-            console.log(`Geocoding error for location "${newListing.location}":`, err.message);
+        const coords = await geocodeLocation(newListing.location);
+        if (coords) {
+            newListing.latitude = coords.latitude;
+            newListing.longitude = coords.longitude;
         }
     }
 
@@ -91,7 +159,24 @@ module.exports.updateListing = async(req,res)=>{
     //     throw new ExpressError(400,"Send valid data for listing"); 
     // }
     let {id} = req.params;
-    let listing  = await Listing.findByIdAndUpdate(id,{...req.body.listing});
+    const existingListing = await Listing.findById(id);
+    if (!existingListing) {
+        req.flash("error", "listing you requested for does not exist");
+        return res.redirect("/listings");
+    }
+
+    let updateData = { ...req.body.listing };
+
+    // Check if location changed
+    if (updateData.location && updateData.location !== existingListing.location) {
+        const coords = await geocodeLocation(updateData.location);
+        if (coords) {
+            updateData.latitude = coords.latitude;
+            updateData.longitude = coords.longitude;
+        }
+    }
+
+    let listing = await Listing.findByIdAndUpdate(id, updateData, { new: true });
 
     if(typeof req.file!== "undefined"){
         let url = req.file.path;
