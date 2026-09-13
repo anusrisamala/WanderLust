@@ -124,3 +124,18 @@ body{
     padding-left: 0;
     padding-right: 0;
 }
+
+#map {
+  height: 400px;
+  width: 100%;
+  border-radius: 12px;
+  margin-top: 15px;
+  margin-bottom: 30px;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  #map {
+    height: 300px;
+  }
+}
