@@ -11,7 +11,7 @@ const methodOverride = require("method-override");
 const ejsMate = require('ejs-mate');
 const ExpressError = require("./utils/ExpressError.js");
 const session = require("express-session");
-const MongoStore = require("connect-mongo");
+const {MongoStore} = require("connect-mongo");
 const flash = require("connect-flash");
 const passport = require("passport");
 const localStrategy = require("passport-local");
@@ -68,7 +68,7 @@ const store = MongoStore.create({
     touchAfter: 24 * 60 * 60,
 });
 
-store.on("error", () => {
+store.on("error", (err) => {
     console.log("Error in MongoStore", err);
 });
 
